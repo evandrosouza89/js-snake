@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice-commanded Snake Game</title>
+
+    <!-- Link to Google Fonts for retro game font -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #222;
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        .vertical-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .game-canvas {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        .info {
+            padding: 20px;
+            font-size: 12px;
+        }
+
+        .header {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .header a {
+            color: #fff;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        canvas {
+            border: 2px solid #fff;
+        }
+
+        .detected-command {
+            padding: 20px;
+            font-size: 16px;
+        }
+
+        li {
+            white-space: pre-wrap; /* This preserves whitespace and wraps lines */
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands"></script>
+</head>
+
+<body>
+
+    <!-- GitHub, LinkedIn, Email links -->
+    <div class="header">
+        <a href="https://github.com/evandrosouza89" target="_blank">GitHub</a> |
+        <a href="https://www.linkedin.com/in/evandro-souza" target="_blank">LinkedIn</a> |
+        <a href="mailto:evandro.souza89@gmail.com">Email</a>
+    </div>
+
+    <div class="vertical-container">
+        
+        <div class="detected-command" id="detectedCommand">
+            <h3>Detected Command:</h3>
+            <p id="command">Listening...</p>
+        </div>
+
+        <div class="game-canvas">
+            <canvas id="gameCanvas" width="500" height="500"></canvas>
+        </div>
+
+        <div class="info">
+            <h3>Voice Commands:</h3>
+            <ul>
+                <li><strong>Up</strong>    - Speak 'Up'    to move the snake upward</li>
+                <li><strong>Down</strong>  - Speak 'Down'  to move the snake downward</li>
+                <li><strong>Left</strong>  - Speak 'Left'  to move the snake to the left</li>
+                <li><strong>Right</strong> - Speak 'Right' to move the snake to the right</li>
+            </ul>
+        </div>
+        
+    </div>
+
+    <script>
+        let recognizer;
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const commandDisplay = document.getElementById('command');
+        const box = 20;  // Size of one grid unit
+
+        let snake = [{ x: Math.floor(canvas.width / (2 * box)) * box, y: Math.floor(canvas.height / (2 * box)) * box }];
+        let direction = null;
+        let food = {
+            x: Math.floor(Math.random() * (canvas.width / box - 1)) * box,
+            y: Math.floor(Math.random() * (canvas.height / box - 1)) * box
+        };
+        let score = 0;
+
+        function changeDirection(newDirection) {
+            const oppositeDirections = {
+                LEFT: 'RIGHT',
+                UP: 'DOWN',
+                RIGHT: 'LEFT',
+                DOWN: 'UP'
+            };
+
+            const newDirectionUpperCase = newDirection.toUpperCase();
+            if (newDirectionUpperCase in oppositeDirections && direction !== oppositeDirections[newDirectionUpperCase]) {
+                commandDisplay.textContent = newDirectionUpperCase;  // Display detected command
+                direction = newDirectionUpperCase;
+            }
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw snake
+            for (let i = 0; i < snake.length; i++) {
+                ctx.fillStyle = i === 0 ? 'lime' : 'green';
+                ctx.fillRect(snake[i].x, snake[i].y, box, box);
+                ctx.strokeStyle = 'darkgreen';
+                ctx.strokeRect(snake[i].x, snake[i].y, box, box);
+            }
+
+            // Draw food
+            ctx.fillStyle = 'red';
+            ctx.fillRect(food.x, food.y, box, box);
+
+            // Old snake head position
+            let snakeX = snake[0].x;
+            let snakeY = snake[0].y;
+
+            // Direction of movement
+            if (direction === 'LEFT') snakeX -= box;
+            if (direction === 'UP') snakeY -= box;
+            if (direction === 'RIGHT') snakeX += box;
+            if (direction === 'DOWN') snakeY += box;
+
+            // Wrap-around logic
+            if (snakeX < 0) snakeX = canvas.width;
+            else if (snakeX >= canvas.width) snakeX = 0;
+
+            if (snakeY < 0) snakeY = canvas.height;
+            else if (snakeY >= canvas.height) snakeY = 0;
+
+            // If snake eats the food
+            if (snakeX === food.x && snakeY === food.y) {
+                score++;
+                food = {
+                    x: Math.floor(Math.random() * (canvas.width / box - 1)) * box,
+                    y: Math.floor(Math.random() * (canvas.height / box - 1)) * box
+                };
+            } else {
+                snake.pop();  // Remove the tail
+            }
+
+            // Add new head
+            const newHead = { x: snakeX, y: snakeY };
+            snake.unshift(newHead);
+
+            // Check for collision with itself
+            if (collision(newHead, snake)) {
+                clearInterval(game);
+                alert('Game Over! Your score: ' + score);
+            }
+
+            // Display score
+            ctx.fillStyle = 'white';
+            ctx.font = '20px "Press Start 2P", cursive';
+            ctx.fillText('Score: ' + score, 10, 25);
+        }
+
+        function collision(head, snake) {
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        async function loadModel() {
+            recognizer = await speechCommands.create('BROWSER_FFT');
+            await recognizer.ensureModelLoaded();
+            console.log('Model loaded.');
+            startListening();
+        }
+
+        function startListening() {
+            recognizer.listen(result => {
+                const mostProbableWord = getMostProbableWord(result.scores);
+                changeDirection(mostProbableWord);
+            }, {
+                probabilityThreshold: 0.995
+            });
+        }
+
+        function getMostProbableWord(scores) {
+            const labels = recognizer.wordLabels();
+            const maxScoreIndex = scores.indexOf(Math.max(...scores));
+            return labels[maxScoreIndex];
+        }
+
+        // Loads the command recognition model
+        loadModel();
+
+        // Call drawGame every 300ms to animate the game
+        const game = setInterval(drawGame, 300);
+
+    </script>
+
+</body>
+
+</html>
