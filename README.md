@@ -19,7 +19,9 @@ This project is a **proof of concept** designed to exercise voice recognition an
 
 ## 📸 Screenshot
 
-![Voice-Commanded Snake Game](/assets/screenshot.png)
+<p align="center">
+    <img src="/assets/screenshot.png" alt="Game screenshot">
+</p>
 
 ## 🎙️ Usage
 
