@@ -2,6 +2,8 @@
 
 This project is a **proof of concept** designed to exercise voice recognition and JavaScript skills. It's a retro-style, voice-controlled Snake game implemented in JavaScript, HTML5, and TensorFlow.js. The game is fully hands-free, using voice commands to control the snake.
 
+[Check live demo on this link](https://evandrosouza89.github.io/js-snake/index.html)
+
 ## 🎮 Features
 
 - **Voice Commands**: Control the snake by saying **"Up"**, **"Down"**, **"Left"**, or **"Right"**.
